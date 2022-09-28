@@ -1,0 +1,5 @@
+{
+  "PYTEST_DOCKER_IMAGE": "python:3.7.14",
+  "PYTEST_CLI_NAME": "pytest",
+  "PYTEST_INSTALL_COMMANDS": "/usr/local/bin/python -m pip install --upgrade pip > /dev/null 2>&1; pip install -U pytest > /dev/null 2>&1; pip install pytest-json-report > /dev/null 2>&1"
+}

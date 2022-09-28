@@ -1,62 +1,33 @@
 {
-  "name": "kaholo-plugin-template",
-  "viewName": "Kaholo Template Plugin",
+  "name": "pytest",
+  "viewName": "pytest",
+  "version": "0.1.20220921",
   "type": "executer",
-  "main": "app.js",
   "execProgram": "node",
-  "exposeRoute": false,
   "imgUrl": "logo.png",
-  "version": "2.0.0",
-  "description": "This plugin is only a generic template.",
-  "category": [
-    "Basic Tools"
-  ],
-  "keywords": [
-    "template",
-    "plugin",
-    "kaholo",
-    "hello"
-   ],
-  "settings": [
-    {
-      "name": "helloName",
-      "viewName": "Default Hello Name",
-      "type": "string",
-      "description": "The person to whom to say hello by default",
-      "learnUrl": "https://docs.apify.com/api/v2#/introduction/authentication"
-    }
-  ],
+  "main": "app.js",
+  "description": "Kaholo Plugin for pytest",
   "methods": [
     {
-      "name": "hello",
-      "viewName": "Say hello",
+      "name": "runCommand",
+      "viewName": "Run pytest Command",
       "params": [
         {
-          "name": "helloName",
-          "viewName": "Hello Name",
+          "name": "workingDirectory",
+          "viewName": "Working Directory",
           "type": "string",
-          "required": false,
-          "placeholder": "World",
-          "default": "World",
-          "description": "The person to whom to say hello",
-          "learnUrl": "https://en.wikipedia.org/wiki/%22Hello,_World!%22_program"
+          "description": "Path to a directory on the Kaholo agent which contains one or more pytest files (test_*.py or *_test.py)",
+          "placeholder": "tests/pytest001",
+          "required": false
         },
         {
-          "name": "secret",
-          "viewName": "Secret",
-          "type": "vault",
-          "required": false,
-          "description": "A secret we might also say.",
-          "learnUrl": "https://en.wikipedia.org/wiki/%22Hello,_World!%22_program"
-        },
-        {
-          "name": "saySecret",
-          "viewName": "Say secret",
-          "type": "boolean",
-          "required": false,
-          "default": false,
-          "description": "If checked we'll also say the secret.",
-          "learnUrl": "https://en.wikipedia.org/wiki/%22Hello,_World!%22_program"
+          "name": "command",
+          "viewName": "Command",
+          "type": "string",
+          "description": "pytest command",
+          "placeholder": "pytest -s --mode quick --estimate",
+          "default": "pytest",
+          "required": true
         }
       ]
     }
