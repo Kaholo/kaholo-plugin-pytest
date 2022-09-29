@@ -8,14 +8,17 @@ const {
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
-  PYTEST_CLI_NAME,
-  PYTEST_INSTALL_COMMANDS,
+  PYTEST_PREP_COMMANDS,
+  PYTEST_RUNAS_COMMANDS
 } = require("./consts.json");
 
 async function execute({ command, workingDirectory }) {
 
-  const combinedCommands = `/bin/sh -c "${PYTEST_INSTALL_COMMANDS}; ${command}"`;
-  
+  const runas = PYTEST_RUNAS_COMMANDS.join("; ");
+  const prep = PYTEST_PREP_COMMANDS.join("; ");
+
+  const combinedCommands = `/bin/sh -c "${prep}; su -c \\\"${runas}; ${command}\\\" pytestuser"`;
+
   const dockerCommandBuildOptions = {
     command: combinedCommands,
     image: PYTEST_DOCKER_IMAGE,
@@ -52,15 +55,14 @@ async function execute({ command, workingDirectory }) {
   const commandOutput = await exec(dockerCommand, {
     env: shellEnvironmentalVariables,
   }).catch((error) => {
-    console.log(error.stdout);
-    throw new Error(error.stderr || error.message || error);
+    throw new Error(error.stderr || error.stdout || error.message || error);
   });
 
   if (commandOutput.stderr && !commandOutput.stdout) {
-    console.error("commandOutput.stderr && !commandOutput.stdout")
     throw new Error(commandOutput.stderr);
-  } else if (commandOutput.stdout) {
-    console.error("else if")
+  };
+
+  if (commandOutput.stderr) {
     console.error(commandOutput.stderr);
   }
 

@@ -1,5 +1,16 @@
 {
   "PYTEST_DOCKER_IMAGE": "python:3.7.14",
   "PYTEST_CLI_NAME": "pytest",
-  "PYTEST_INSTALL_COMMANDS": "/usr/local/bin/python -m pip install --upgrade pip > /dev/null 2>&1; pip install -U pytest > /dev/null 2>&1; pip install pytest-json-report > /dev/null 2>&1"
+  "PYTEST_PREP_COMMANDS": [
+    "useradd -d /home/pytestuser -p \\$(openssl passwd -1 password) pytestuser",
+    "mkdir /home/pytestuser",
+    "chown pytestuser:pytestuser /home/pytestuser",
+    "chown pytestuser:pytestuser ."
+  ],
+  "PYTEST_RUNAS_COMMANDS": [
+    "export PATH=\\\\$PATH:/home/pytestuser/.local/bin",
+    "/usr/local/bin/python -m pip install --upgrade pip > /dev/null 2>&1",
+    "pip install pytest > /dev/null 2>&1",
+    "pip install pytest-json-report > /dev/null 2>&1"
+  ]
 }
