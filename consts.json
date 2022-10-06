@@ -11,6 +11,9 @@
     "export PATH=\\\\$PATH:/home/pytestuser/.local/bin",
     "/usr/local/bin/python -m pip install --upgrade pip > /dev/null 2>&1",
     "pip install pytest > /dev/null 2>&1",
-    "pip install pytest-json-report > /dev/null 2>&1"
+    "pip install pytest-json-report > /dev/null 2>&1",
+    "pip install pipreqs > /dev/null 2>&1",
+    "pipreqs --force . > /dev/null 2>&1",
+    "pip install -r requirements.txt > /dev/null 2>&1"
   ]
 }
