@@ -28,6 +28,28 @@
           "placeholder": "pytest -s --mode quick --estimate",
           "default": "pytest",
           "required": true
+        },
+        {
+          "name": "jsonReport",
+          "viewName": "JSON Report",
+          "type": "options",
+          "description": "Optionally create JSON report (\".report.json\" in Working Directory)",
+          "placeholder": "None",
+          "default": "none",
+          "options": [
+            {
+              "id": "none",
+              "name": "None"
+            },
+            {
+              "id": "summary",
+              "name": "Summary"
+            },
+            {
+              "id": "full",
+              "name": "Full Report"
+            }
+          ]
         }
       ]
     }
