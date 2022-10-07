@@ -1,7 +1,7 @@
 {
   "name": "pytest",
   "viewName": "pytest",
-  "version": "0.1.20221006",
+  "version": "0.1.20221007",
   "type": "executer",
   "execProgram": "node",
   "imgUrl": "logo.png",

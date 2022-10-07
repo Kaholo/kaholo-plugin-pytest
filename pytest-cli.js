@@ -51,22 +51,39 @@ async function execute({ command, workingDirectory }) {
   dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
 
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
+  
+  const pytestOutput = {stdout: "", stderr: ""};
 
   const commandOutput = await exec(dockerCommand, {
     env: shellEnvironmentalVariables,
   }).catch((error) => {
-    throw new Error(error.stderr || error.stdout || error.message || error);
+    pytestOutput.stdout=error.stdout;
+    pytestOutput.stderr=error.stderr;
   });
 
-  if (commandOutput.stderr && !commandOutput.stdout) {
-    throw new Error(commandOutput.stderr);
-  };
-
-  if (commandOutput.stderr) {
-    console.error(commandOutput.stderr);
+  // no caught errors
+  if (commandOutput) {
+    if (commandOutput.stderr !== "" ) {
+      console.error(commandOutput.stderr);
+      pytestOutput.cmderr = commandOutput.stderr;  
+    }
+    if (commandOutput.stdout !== "" ) {
+      return commandOutput.stdout;
+    }
   }
 
-  return commandOutput.stdout;
+  // caught a "real" error - fail the action
+  if (pytestOutput.stderr !== "" ) {
+    throw new Error(pytestOutput.stderr);
+  }
+    
+  // caught error was probably just failing pytests
+  if (pytestOutput.stdout !== "" ) {
+    return pytestOutput.stdout;
+  }
+
+  // not sure how this is reachable code but just in case
+  throw new Error(pytestOutput);
 }
 
 module.exports = {
