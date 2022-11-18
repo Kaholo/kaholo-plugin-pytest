@@ -1,11 +1,10 @@
 const { docker } = require("@kaholo/plugin-library");
-const {
-  resolve: resolvePath,
-} = require("path");
+const { resolve: resolvePath } = require("path");
+
 const {
   exec,
   assertPathExistence,
-  triageCommand,
+  chooseCommand,
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
@@ -14,20 +13,20 @@ const {
 } = require("./consts.json");
 
 async function execute({ command, workingDirectory, jsonReport }) {
-  const runas = PYTEST_RUNAS_COMMANDS.join("; ");
-  const prep = PYTEST_PREP_COMMANDS.join("; ");
+  const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
+  const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
 
-  const triagedCommand = await triageCommand(command, jsonReport);
-
-  const combinedCommands = `/bin/sh -c "${prep}; su -c \\\"${runas}; ${triagedCommand}\\\" pytestuser"`;
+  const chosenCommand = await chooseCommand(command, jsonReport);
+  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser"`;
 
   const dockerCommandBuildOptions = {
-    command: combinedCommands,
+    command: docker.sanitizeCommand(combinedCommands),
     image: PYTEST_DOCKER_IMAGE,
   };
 
   const dockerEnvironmentalVariables = {};
   const volumeDefinitionsArray = [];
+  let shellEnvironmentalVariables = {};
 
   if (workingDirectory) {
     const absoluteWorkingDirectory = resolvePath(workingDirectory);
@@ -53,8 +52,7 @@ async function execute({ command, workingDirectory, jsonReport }) {
   dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
 
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
-
-  const pytestOutput = { "stdout": "", "stderr": "" };
+  const pytestOutput = { stdout: "", stderr: "" };
 
   const commandOutput = await exec(dockerCommand, {
     env: shellEnvironmentalVariables,
@@ -64,27 +62,22 @@ async function execute({ command, workingDirectory, jsonReport }) {
   });
 
   // no caught errors
-  if (commandOutput) {
-    if (commandOutput.stderr !== "") {
-      console.error(commandOutput.stderr);
-      pytestOutput.cmderr = commandOutput.stderr;
-    }
-    if (commandOutput.stdout !== "") {
-      return commandOutput.stdout;
-    }
+  if (commandOutput?.stderr !== "") {
+    console.error(commandOutput.stderr);
+    pytestOutput.cmderr = commandOutput.stderr;
+  }
+  if (commandOutput?.stdout !== "") {
+    return commandOutput.stdout;
   }
 
   // caught a "real" error - fail the action
   if (pytestOutput.stderr !== "") {
     throw new Error(pytestOutput.stderr);
   }
-
   // caught error was probably just failing pytests
   if (pytestOutput.stdout !== "") {
     return pytestOutput.stdout;
   }
-
-  // not sure how this is reachable code but just in case
   throw new Error(pytestOutput);
 }
 

@@ -17,13 +17,14 @@ async function assertPathExistence(path) {
   }
 }
 
-async function triageCommand(command, jsonReport) {
+async function chooseCommand(command, jsonReport) {
   if (command.substring(0, PYTEST_CLI_NAME.length) !== PYTEST_CLI_NAME) {
     throw new Error(`Command must begin with "${PYTEST_CLI_NAME}".`);
   }
   if (command.includes("--json-report") || jsonReport === undefined) {
     return command;
   }
+
   switch (jsonReport) {
     case "none":
       return command;
@@ -39,5 +40,5 @@ async function triageCommand(command, jsonReport) {
 module.exports = {
   assertPathExistence,
   exec,
-  triageCommand,
+  chooseCommand,
 };
