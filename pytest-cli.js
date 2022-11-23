@@ -4,12 +4,12 @@ const { resolve: resolvePath } = require("path");
 const {
   exec,
   assertPathExistence,
-  chooseCommand,
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
   PYTEST_PREP_COMMANDS,
   PYTEST_RUNAS_COMMANDS,
+  PYTEST_CLI_NAME,
 } = require("./consts.json");
 
 async function execute(params) {
@@ -90,6 +90,26 @@ async function prepareBuildDockerCommandOptions(params) {
   dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
 
   return dockerCommandBuildOptions;
+}
+
+function chooseCommand(command, jsonReport) {
+  if (command.substring(0, PYTEST_CLI_NAME.length) !== PYTEST_CLI_NAME) {
+    throw new Error(`Command must begin with "${PYTEST_CLI_NAME}".`);
+  }
+  if (command.includes("--json-report") || jsonReport === undefined) {
+    return command;
+  }
+
+  switch (jsonReport) {
+    case "none":
+      return command;
+    case "full":
+      return `${PYTEST_CLI_NAME} --json-report${command.substring(PYTEST_CLI_NAME.length)}`;
+    case "summary":
+      return `${PYTEST_CLI_NAME} --json-report --json-report-summary${command.substring(PYTEST_CLI_NAME.length)}`;
+    default:
+      throw new Error("Parameter JSON Report is not properly specified as \"none\", \"full\", or \"summary\"");
+  }
 }
 
 module.exports = {
