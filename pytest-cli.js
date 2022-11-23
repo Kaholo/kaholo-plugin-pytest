@@ -13,7 +13,7 @@ const {
 } = require("./consts.json");
 
 async function execute(params) {
-  const dockerCommandBuildOptions = prepareBuildDockerCommandOptions(params);
+  const dockerCommandBuildOptions = await prepareBuildDockerCommandOptions(params);
 
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
   const pytestOutput = { stdout: "", stderr: "" };
