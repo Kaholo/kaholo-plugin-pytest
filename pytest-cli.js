@@ -88,6 +88,8 @@ async function prepareBuildDockerCommandOptions(params) {
 
   dockerCommandBuildOptions.volumeDefinitionsArray = volumeDefinitionsArray;
   dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
+
+  return dockerCommandBuildOptions;
 }
 
 module.exports = {
