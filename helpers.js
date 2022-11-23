@@ -17,7 +17,7 @@ async function assertPathExistence(path) {
   }
 }
 
-async function chooseCommand(command, jsonReport) {
+function chooseCommand(command, jsonReport) {
   if (command.substring(0, PYTEST_CLI_NAME.length) !== PYTEST_CLI_NAME) {
     throw new Error(`Command must begin with "${PYTEST_CLI_NAME}".`);
   }

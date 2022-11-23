@@ -12,50 +12,14 @@ const {
   PYTEST_RUNAS_COMMANDS,
 } = require("./consts.json");
 
-async function execute({ command, workingDirectory, jsonReport }) {
-  const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
-  const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
-
-  const chosenCommand = await chooseCommand(command, jsonReport);
-  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser"`;
-
-  const dockerCommandBuildOptions = {
-    command: docker.sanitizeCommand(combinedCommands),
-    image: PYTEST_DOCKER_IMAGE,
-  };
-
-  const dockerEnvironmentalVariables = {};
-  const volumeDefinitionsArray = [];
-  let shellEnvironmentalVariables = {};
-
-  if (workingDirectory) {
-    const absoluteWorkingDirectory = resolvePath(workingDirectory);
-
-    await assertPathExistence(absoluteWorkingDirectory);
-    const workingDirVolumeDefinition = docker.createVolumeDefinition(absoluteWorkingDirectory);
-
-    dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (
-      workingDirVolumeDefinition.mountPoint.value
-    );
-
-    shellEnvironmentalVariables = {
-      ...dockerEnvironmentalVariables,
-      PIP_ROOT_USER_ACTION: "ignore",
-      [workingDirVolumeDefinition.path.name]: workingDirVolumeDefinition.path.value,
-    };
-
-    volumeDefinitionsArray.push(workingDirVolumeDefinition);
-    dockerCommandBuildOptions.workingDirectory = workingDirVolumeDefinition.mountPoint.value;
-  }
-
-  dockerCommandBuildOptions.volumeDefinitionsArray = volumeDefinitionsArray;
-  dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
+async function execute(params) {
+  const dockerCommandBuildOptions = prepareBuildDockerCommandOptions(params);
 
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
   const pytestOutput = { stdout: "", stderr: "" };
 
   const commandOutput = await exec(dockerCommand, {
-    env: shellEnvironmentalVariables,
+    env: dockerCommandBuildOptions.shellEnvironmentalVariables,
   }).catch((error) => {
     pytestOutput.stdout = error.stdout;
     pytestOutput.stderr = error.stderr;
@@ -79,6 +43,51 @@ async function execute({ command, workingDirectory, jsonReport }) {
     return pytestOutput.stdout;
   }
   throw new Error(pytestOutput);
+}
+
+async function prepareBuildDockerCommandOptions(params) {
+  const {
+    command,
+    jsonReport,
+    workingDirectory,
+  } = params;
+
+  const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
+  const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
+
+  const chosenCommand = chooseCommand(command, jsonReport);
+  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser"`;
+
+  const dockerCommandBuildOptions = {
+    command: docker.sanitizeCommand(combinedCommands),
+    image: PYTEST_DOCKER_IMAGE,
+  };
+
+  const dockerEnvironmentalVariables = {};
+  const volumeDefinitionsArray = [];
+
+  if (workingDirectory) {
+    const absoluteWorkingDirectory = resolvePath(workingDirectory);
+
+    await assertPathExistence(absoluteWorkingDirectory);
+    const workingDirVolumeDefinition = docker.createVolumeDefinition(absoluteWorkingDirectory);
+
+    dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (
+      workingDirVolumeDefinition.mountPoint.value
+    );
+
+    dockerCommandBuildOptions.shellEnvironmentalVariables = {
+      ...dockerEnvironmentalVariables,
+      PIP_ROOT_USER_ACTION: "ignore",
+      [workingDirVolumeDefinition.path.name]: workingDirVolumeDefinition.path.value,
+    };
+
+    volumeDefinitionsArray.push(workingDirVolumeDefinition);
+    dockerCommandBuildOptions.workingDirectory = workingDirVolumeDefinition.mountPoint.value;
+  }
+
+  dockerCommandBuildOptions.volumeDefinitionsArray = volumeDefinitionsArray;
+  dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
 }
 
 module.exports = {
