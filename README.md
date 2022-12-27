@@ -17,7 +17,7 @@ Since each run of the plugin starts with a fresh python image, some setup steps 
 * installing/upgrading modules pip, pytest, pytest-json-report, and pipreqs
 * using pipreqs to identify and install/upgrade modules required by the project and tests
 
-File consts.json also selects a specific version of the base python image to start with. Depending on how your python projects and tests were developed, some modifications or other version of python may be required to accomodate your pytest needs. If the plugin isn't working for you, please let us know.
+File consts.json also specifies a specific default version of the base python image to start with. Depending on how your python projects and tests were developed, a different image may be needed. For that, use parameter `Alternative Docker Image`.
 
 ## Plugin Installation
 For download, installation, upgrade, downgrade and troubleshooting of plugins in general, see [INSTALL.md](./INSTALL.md).
@@ -32,4 +32,7 @@ This is a path on the Kaholo Agent within which a project containing pytest modu
 This is the actual pytest command that will be run. The simplest command is just `pytest`, which will run all pytest modules found in the Working Directory.
 
 ### Parameter: JSON Report
-This parameter allows for easy selection of Full or Summary JSON reports using module `pytest-json-report`. It is the equivalent of using `--json-report` (Full) or `--json-report-summary` (Summary) on the command line. If selected here, it is not necessary to add them to the command.
+This parameter allows for easy selection of Full or Summary JSON reports using module `pytest-json-report`. It is the equivalent of using `--json-report` (Full) or `--json-report-summary` (Summary) on the command line. If selected here, it is not necessary to add them to the command. Making a selection here other than `none` will also publish the resulting JSON report to Kaholo Final Results for convenient access in the code layer.
+
+### Parameter: Alternative Docker Image
+Some pytest projects and modules may require a Python version different from the default specified in file `consts.json`. The plugin is not guaranteed to work properly with just any Python image, but some success is likely to be had with alternate versions such as `python:3.8` or `python:3.9.16`. This parameter is provided for such experimentation. If an image cannot be found to make the plugin work correctly for your `pytest` use case please do let us know.
