@@ -26,20 +26,20 @@ async function execute(params) {
   });
 
   // no caught errors
-  if (commandOutput?.stderr !== "") {
+  if (commandOutput?.stderr) {
     console.error(commandOutput.stderr);
     pytestOutput.cmderr = commandOutput.stderr;
   }
-  if (commandOutput?.stdout !== "") {
+  if (commandOutput?.stdout) {
     return commandOutput.stdout;
   }
 
   // caught a "real" error - fail the action
-  if (pytestOutput.stderr !== "") {
+  if (pytestOutput.stderr) {
     throw new Error(pytestOutput.stderr);
   }
   // caught error was probably just failing pytests
-  if (pytestOutput.stdout !== "") {
+  if (pytestOutput.stdout) {
     return pytestOutput.stdout;
   }
   throw new Error(pytestOutput);
@@ -56,7 +56,7 @@ async function prepareBuildDockerCommandOptions(params) {
   const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
 
   const chosenCommand = chooseCommand(command, jsonReport);
-  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser"`;
+  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser`;
 
   const dockerCommandBuildOptions = {
     command: docker.sanitizeCommand(combinedCommands),
