@@ -4,12 +4,14 @@ const { resolve: resolvePath } = require("path");
 const {
   exec,
   assertPathExistence,
+  getFileContent,
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
   PYTEST_PREP_COMMANDS,
   PYTEST_RUNAS_COMMANDS,
   PYTEST_CLI_NAME,
+  PYTEST_CLI_FULLPATH,
 } = require("./consts.json");
 
 async function execute(params) {
@@ -31,18 +33,31 @@ async function execute(params) {
     pytestOutput.cmderr = commandOutput.stderr;
   }
   if (commandOutput?.stdout) {
-    return commandOutput.stdout;
+    if (params.jsonReport !== "none") {
+      const jsonPath = { PATH: `${params.workingDirectory}/.report.json` };
+      const jsonReport = await getFileContent(jsonPath);
+      if (jsonReport) {
+        return jsonReport;
+      }
+      return commandOutput.stdout;
+    }
   }
-
   // caught a "real" error - fail the action
   if (pytestOutput.stderr) {
     throw new Error(pytestOutput.stderr);
   }
   // caught error was probably just failing pytests
   if (pytestOutput.stdout) {
+    if (params.jsonReport !== "none") {
+      const jsonPath = { PATH: `${params.workingDirectory}/.report.json` };
+      const jsonReport = await getFileContent(jsonPath);
+      if (jsonReport) {
+        return jsonReport;
+      }
+    }
     return pytestOutput.stdout;
   }
-  throw new Error(pytestOutput);
+  throw new Error("Unexpected conclusion with no observable results.");
 }
 
 async function prepareBuildDockerCommandOptions(params) {
@@ -50,8 +65,14 @@ async function prepareBuildDockerCommandOptions(params) {
     command,
     jsonReport,
     workingDirectory,
+    altImage,
   } = params;
 
+  if (altImage) {
+    if (altImage.substring(0, 6) !== "python") {
+      console.error(`\nWARNING: Docker Hub "python" image is expected. Using image ${altImage} instead may yeild unreliable results.\n`);
+    }
+  }
   const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
   const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
 
@@ -60,7 +81,7 @@ async function prepareBuildDockerCommandOptions(params) {
 
   const dockerCommandBuildOptions = {
     command: docker.sanitizeCommand(combinedCommands),
-    image: PYTEST_DOCKER_IMAGE,
+    image: altImage ?? PYTEST_DOCKER_IMAGE,
   };
 
   const dockerEnvironmentalVariables = {};
@@ -96,17 +117,18 @@ function chooseCommand(command, jsonReport) {
   if (command.substring(0, PYTEST_CLI_NAME.length) !== PYTEST_CLI_NAME) {
     throw new Error(`Command must begin with "${PYTEST_CLI_NAME}".`);
   }
+  const fullPathCommand = `${PYTEST_CLI_FULLPATH}${command.substring(PYTEST_CLI_NAME.length)}`;
   if (command.includes("--json-report") || jsonReport === undefined) {
-    return command;
+    return fullPathCommand;
   }
 
   switch (jsonReport) {
     case "none":
-      return command;
+      return fullPathCommand;
     case "full":
-      return `${PYTEST_CLI_NAME} --json-report${command.substring(PYTEST_CLI_NAME.length)}`;
+      return `${PYTEST_CLI_FULLPATH} --json-report${fullPathCommand.substring(PYTEST_CLI_FULLPATH.length)}`;
     case "summary":
-      return `${PYTEST_CLI_NAME} --json-report --json-report-summary${command.substring(PYTEST_CLI_NAME.length)}`;
+      return `${PYTEST_CLI_FULLPATH} --json-report --json-report-summary${fullPathCommand.substring(PYTEST_CLI_FULLPATH.length)}`;
     default:
       throw new Error("Parameter JSON Report is not properly specified as \"none\", \"full\", or \"summary\"");
   }

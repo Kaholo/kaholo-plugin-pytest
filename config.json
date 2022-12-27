@@ -1,7 +1,7 @@
 {
   "name": "pytest",
   "viewName": "pytest",
-  "version": "0.1.20221007",
+  "version": "0.2.0",
   "type": "executer",
   "execProgram": "node",
   "imgUrl": "logo.png",
@@ -50,6 +50,14 @@
               "name": "Full Report"
             }
           ]
+        },
+        {
+          "name": "altImage",
+          "viewName": "Alternative Docker Image",
+          "type": "string",
+          "description": "repo:tag for an alternative python image to use",
+          "placeholder": "python:3.10.9-buster",
+          "required": false
         }
       ]
     }
