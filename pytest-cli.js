@@ -3,7 +3,7 @@ const { resolve: resolvePath } = require("path");
 
 const {
   exec,
-  assertPathExistence,
+  statPath,
   getFileContent,
 } = require("./helpers");
 const {
@@ -88,9 +88,11 @@ async function prepareBuildDockerCommandOptions(params) {
   const volumeDefinitionsArray = [];
 
   if (workingDirectory) {
+    const stat = await statPath(workingDirectory);
+    if (stat !== "DIRECTORY") {
+      throw new Error(`This path does not exist or is not a directory: ${workingDirectory}`);
+    }
     const absoluteWorkingDirectory = resolvePath(workingDirectory);
-
-    await assertPathExistence(absoluteWorkingDirectory);
     const workingDirVolumeDefinition = docker.createVolumeDefinition(absoluteWorkingDirectory);
 
     dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (

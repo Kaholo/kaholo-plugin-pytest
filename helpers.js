@@ -4,17 +4,25 @@ const fs = require("fs/promises");
 
 const exec = util.promisify(childProcess.exec);
 
-async function assertPathExistence(path) {
+async function statPath(path) {
+  let stats;
   try {
-    await fs.access(path, fs.constants.F_OK);
-    return true;
+    stats = await fs.stat(path);
+    if (stats.isFile()) {
+      return "FILE";
+    }
+    if (stats.isDirectory()) {
+      return "DIRECTORY";
+    }
   } catch {
-    return false;
+    return "DOES_NOT_EXIST";
   }
+  return "UNKNOWN";
 }
 
 async function getFileContent({ PATH: path }) {
-  if (assertPathExistence(path)) {
+  const stat = await statPath(path);
+  if (stat === "FILE") {
     try {
       return await fs.readFile(path, { encoding: "utf8" });
     } catch (error) {
@@ -27,7 +35,7 @@ async function getFileContent({ PATH: path }) {
 }
 
 module.exports = {
-  assertPathExistence,
+  statPath,
   exec,
   getFileContent,
 };
