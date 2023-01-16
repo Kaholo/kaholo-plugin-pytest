@@ -1,27 +1,38 @@
-# Kaholo pytest Plugin
-Documentation not written yet.
+# Kaholo Pytest Plugin
+Pytest is a Python testing framework that originated from the PyPy project. It can be used to write various types of software tests, including unit tests, integration tests, end-to-end tests, and functional tests.
+
+This plugin extends Kaholo to be able to run Pytest tests. This is equivalent to running command `pytest` at the command line.
 
 ## Use of Docker
-This plugin relies on the [official Docker image](https://hub.docker.com/_/maven) "maven" to run the Maven command, `mvn`. This has many upsides but a few downsides as well of which the user should be aware.
+This plugin relies on the [official Docker image](https://hub.docker.com/_/python) `python` to run the pytest command, `pytest`. This has many upsides but a few downsides as well of which the user should be aware.
 
-If running your own Kaholo agents in a custom environment, you will have to ensure docker is installed and running on the agent and has sufficient privilege to retrieve the image and start a container. If the agent is already running in a container (kubernetes or docker) then this means a docker container running within another container.
+The first time the plugin is used on each agent, docker may spend a minute or two downloading the image. After that the delay of starting up another docker image each time is quite small, a second or two. Command `pytest --version` is a quick and simple command to force the image to download and/or test if the image is already cached locally on the Kaholo agent.
 
-The first time the plugin is used on each agent, docker may spend a minute or two downloading the image. After that the delay of starting up another docker image each time is quite small, a second or two. Method "Get Maven Version" is a quick and simple way to force the image to download and/or test if the image is already cached locally on the Kaholo agent.
+Next, because the command is running inside a docker container, it will not have access to the complete filesystem on the Kaholo agent. Parameter "Working Directory" is particularly important for this. Suppose on the agent you have a repository cloned using the Git plugin at location `myproject/myapp`, and you wish to run `pytest tests/unit` for this project. This means there are pytest modules with names matching `test_*.py` or `*_test.py` in directory `myproject/myapp/tests/unit/`. This will be found if the working directory is `myproject/myapp` and the command is `pytest tests/unit`. Any files outside of `myproject/myapp` will not be accessible within the docker image running the `pytest` command. Absolute path can also be used. In this example the absolute path of the Working Directory might be `/twiddlebug/workspace/myproject/myapp`. If no working directory is specified the agent's default working directory is `/twiddlebug/workspace`, and the test might be run using command `pytest myproject/myapp/tests/unit`.
 
-Next, because the CLI is running inside a docker container, it will not have access to the complete filesystem on the Kaholo agent. Parameter "Working Directory" is particularly important for this. Suppose on the agent you have a repository cloned at location `/home/myproject/myapp`, and you wish to `mvn package` this project. This means your Maven Project Object Model or POM (`pom.xml`) is located at `/home/myproject/myapp/pom.xml`. This will be found if your working directory is `/home/myproject/myapp` and your command is `mvn package`. Any files outside of `/home/myproject/myapp` will not be accessible within the docker image running the `mvn` command. Alternatively you could make Working Directory `/home/myproject` and the Command `mvn package -f myapp/pom.xml`. In this case files outside of `myapp` are reachable, but only if they are elsewhere within `/home/myproject`.
+The docker container is destroyed once the command has successfully run, so output files will also be destroyed, apart from those within the working directory.
 
-The docker container is destroyed once the command has successfully run, so output files will also be destroyed, apart from those within your working directory. This includes the maven cache typically located at `~/.m2`. Every build must therefore download all dependencies every time. For large builds without (for example) a local cache service or local Nexus proxy this may become unacceptably slow. If you would like us to improve the plugin to handle this some other way, please [let us know](https://kaholo.io/contact/).
+Since each run of the plugin starts with a fresh python image, some setup steps are required to prepare the image to run pytest commands. These can be found in the consts.json file of the plugin. They include:
+* adding a user `pytestuser` to avoid errors caused by running as user "root"
+* installing/upgrading modules pip, pytest, pytest-json-report, and pipreqs
+* using pipreqs to identify and install/upgrade modules required by the project and tests
 
-Should these limitations negatively impact on your use case, Maven can be installed on the agent and run via the Command Line plugin instead. A main purpose for this plugin is to help you avoid that inconvenience.
+File consts.json also specifies a specific default version of the base python image to start with. Depending on how your python projects and tests were developed, a different image may be needed. For that, use parameter `Alternative Docker Image`.
 
 ## Plugin Installation
 For download, installation, upgrade, downgrade and troubleshooting of plugins in general, see [INSTALL.md](./INSTALL.md).
 
-## Method: Get Maven Version
-This method does a trivial test of the Maven plugin to confirm that the docker image can be pulled and a Maven command successfully run, in this case `mvn --version`. Use this method only to confirm the plugin and Kaholo agent are working as designed and ready to execute your Maven commands.
+## Method: Run Pytest Command
+This method run any command that begins with `pytest`, for example `pytest --version` or `pytest tests/unit`. To run commands that do NOT start with `pytest`, see the [Command Line plugin](https://github.com/Kaholo/kaholo-plugin-cmd) instead.
 
-## Method: Run Maven Command
-This method run any command that begins with `mvn`, for example `mvn package`. To run commands that do NOT start with `mvn`, see the [Command Line plugin](https://github.com/Kaholo/kaholo-plugin-cmd) instead.
+### Parameter: Working Directory
+This is a path on the Kaholo Agent within which a project containing pytest modules exists. This is typically a repository cloned to the agent using the [Git Plugin](https://github.com/Kaholo/kaholo-plugin-git) earlier in the pipeline. Only files within this directory will be available to the pytest command, and only output written within this directory will be available on the agent once the Action has completed.
 
-### Parameters
-* Working Directory - a path within which the project requiring building exists. This is typically a repository cloned to the agent using the [Git Plugin](https://github.com/Kaholo/kaholo-plugin-git) earlier in the pipeline. It is simplest if this directory contains the main pom.xml. Only files within this directory will be available to the maven command.
+### Parameter: Command
+This is the actual pytest command that will be run. The simplest command is just `pytest`, which will run all pytest modules found in the Working Directory.
+
+### Parameter: JSON Report
+This parameter allows for easy selection of Full or Summary JSON reports using module `pytest-json-report`. It is the equivalent of using `--json-report` (Full) or `--json-report-summary` (Summary) on the command line. If selected here, it is not necessary to add them to the command. Making a selection here other than `none` will also publish the resulting JSON report to Kaholo Final Results for convenient access in the code layer.
+
+### Parameter: Alternative Docker Image
+Some pytest projects and modules may require a Python version different from the default specified in file `consts.json`. The plugin is not guaranteed to work properly with just any Python image, but some success is likely to be had with alternate versions such as `python:3.8` or `python:3.9.16`. This parameter is provided for such experimentation. If an image cannot be found to make the plugin work correctly for your `pytest` use case please do let us know.
