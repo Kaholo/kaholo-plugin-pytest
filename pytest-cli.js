@@ -20,12 +20,20 @@ async function execute(params) {
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
   const pytestOutput = { stdout: "", stderr: "" };
 
-  const commandOutput = await exec(dockerCommand, {
-    env: dockerCommandBuildOptions.shellEnvironmentalVariables,
-  }).catch((error) => {
-    pytestOutput.stdout = error.stdout;
-    pytestOutput.stderr = error.stderr;
-  });
+  let commandOutput = {};
+  try {
+    commandOutput = await exec(dockerCommand, {
+      env: dockerCommandBuildOptions.shellEnvironmentalVariables,
+    });
+  } catch (error) {
+    if (error.stderr.startsWith("Unable to find image")) {
+      commandOutput.stdout = error.stdout;
+      commandOutput.stderr = error.stderr;
+    } else {
+      pytestOutput.stdout = error.stdout;
+      pytestOutput.stderr = error.stderr;
+    }
+  }
 
   // no caught errors
   if (commandOutput?.stderr) {
@@ -43,7 +51,7 @@ async function execute(params) {
     }
   }
   // caught a "real" error - fail the action
-  if (pytestOutput.stderr) {
+  if (pytestOutput.stderr && !pytestOutput.stdout) {
     throw new Error(pytestOutput.stderr);
   }
   // caught error was probably just failing pytests
