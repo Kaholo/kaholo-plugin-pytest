@@ -7,6 +7,14 @@
   "imgUrl": "logo.png",
   "main": "app.js",
   "description": "Kaholo Plugin for pytest",
+  "category": "TESTING",
+  "keywords": [
+    "testing",
+    "pytest",
+    "python",
+    "test",
+    "cli"
+  ],
   "methods": [
     {
       "name": "runCommand",
