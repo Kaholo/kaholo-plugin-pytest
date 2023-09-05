@@ -20,11 +20,17 @@
     {
       "name": "runCommand",
       "viewName": "Run pytest Command",
+      "allowEmptyResult": true,
       "params": [
         {
           "name": "workingDirectory",
           "viewName": "Working Directory",
           "type": "string",
+          "parserType": "filePath",
+          "parserOptions": {
+            "throwIfDoesntExist": true,
+            "acceptedTypes": ["directory"]
+          },
           "description": "Path to a directory on the Kaholo agent which contains one or more pytest files (test_*.py or *_test.py)",
           "placeholder": "tests/pytest001",
           "required": false
@@ -67,6 +73,14 @@
           "description": "repo:tag for an alternative python image to use",
           "placeholder": "python:3.7.14",
           "required": false
+        },
+        {
+          "name": "environmentVariables",
+          "viewName": "Environment Variables",
+          "description": "one-per-line key=value environment variables for Pytest's execution environment",
+          "placeholder": "USER=olivia\nDEBUG_LEVEL=3",
+          "type": "text",
+          "parserType": "keyValuePairs"
         }
       ]
     }

@@ -9,11 +9,17 @@
     "chown pytestuser:pytestuser ."
   ],
   "PYTEST_RUNAS_COMMANDS": [
-    "/usr/local/bin/python -m pip install --upgrade pip > /dev/null 2>&1",
-    "pip install pytest > /dev/null 2>&1",
-    "pip install pytest-json-report > /dev/null 2>&1",
-    "pip install pipreqs > /dev/null 2>&1",
-    "/home/pytestuser/.local/bin/pipreqs --force . > /dev/null 2>&1",
-    "pip install -r requirements.txt > /dev/null 2>&1"
-  ]
+    "/usr/local/bin/python -m pip install --upgrade pip",
+    "pip install pytest",
+    "pip install pytest-json-report"
+  ],
+  "PYTEST_PIPREQS_COMMANDS": [
+    "pip install pipreqs",
+    "/home/pytestuser/.local/bin/pipreqs .",
+    "pip install -r requirements.txt"
+  ],
+  "PYTEST_REQS_COMMAND": [
+    "pip install -r requirements.txt"
+  ],
+  "EMPTY_RETURN_VALUE": ""
 }
