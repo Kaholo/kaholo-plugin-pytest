@@ -12,9 +12,11 @@ const {
   PYTEST_REQS_COMMAND,
   PYTEST_CLI_NAME,
   PYTEST_CLI_FULLPATH,
+  EMPTY_RETURN_VALUE,
 } = require("./consts.json");
 
 async function execute(params) {
+  const { failOnTestFailure } = params;
   const dockerCommandBuildOptions = await prepareBuildDockerCommandOptions(params);
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
 
@@ -40,7 +42,10 @@ async function execute(params) {
         // all good
         break;
       case 1:
-        // some tests failed, Activity Log or JSON report explains it already
+        if (failOnTestFailure) {
+          throw new Error("Tests were collected and run but some of the tests failed.");
+        }
+        // otherwise let it go
         break;
       case 2:
         throw new Error("Test execution was interrupted by the user.");
@@ -64,6 +69,10 @@ async function execute(params) {
         return jsonReport;
       }
     }
+  }
+
+  if (!failOnTestFailure && result === 1) {
+    return EMPTY_RETURN_VALUE;
   }
 
   return result;

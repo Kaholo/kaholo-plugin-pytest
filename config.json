@@ -81,6 +81,13 @@
           "placeholder": "USER=olivia\nDEBUG_LEVEL=3",
           "type": "text",
           "parserType": "keyValuePairs"
+        },
+        {
+          "name": "failOnTestFailure",
+          "viewName": "Fail Action if Test Fails",
+          "description": "If any test fails, make Kaholo Action fail too. (No JSON report in Final Result)",
+          "type": "boolean",
+          "default": false
         }
       ]
     }
