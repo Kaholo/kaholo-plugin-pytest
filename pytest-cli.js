@@ -2,7 +2,7 @@ const { docker, helpers } = require("@kaholo/plugin-library");
 
 const {
   liveLogExec,
-  getFileContent,
+  getReportObject,
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
@@ -42,10 +42,7 @@ async function execute(params) {
         // all good
         break;
       case 1:
-        if (failOnTestFailure) {
-          throw new Error("Tests were collected and run but some of the tests failed.");
-        }
-        // otherwise let it go
+        // handle this later
         break;
       case 2:
         throw new Error("Test execution was interrupted by the user.");
@@ -64,17 +61,22 @@ async function execute(params) {
     const report = await helpers.analyzePath(`${params.workingDirectory.absolutePath}/.report.json`);
     if (report.exists) {
       const jsonPath = { PATH: report.absolutePath };
-      const jsonReport = await getFileContent(jsonPath);
+      const jsonReport = await getReportObject(jsonPath);
       if (jsonReport) {
+        if (result === 1 && failOnTestFailure) {
+          throw jsonReport;
+        }
         return jsonReport;
       }
     }
   }
 
-  if (!failOnTestFailure && result === 1) {
+  if (result === 1) {
+    if (failOnTestFailure) {
+      throw new Error("Tests were collected and run but some of the tests failed.");
+    }
     return EMPTY_RETURN_VALUE;
   }
-
   return result;
 }
 

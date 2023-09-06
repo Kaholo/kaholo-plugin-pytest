@@ -37,15 +37,16 @@ async function liveLogExec(params) {
   return EMPTY_RETURN_VALUE;
 }
 
-async function getFileContent({ PATH: path }) {
+async function getReportObject({ PATH: path }) {
   try {
-    return await fs.readFile(path, { encoding: "utf8" });
+    const reportText = await fs.readFile(path, { encoding: "utf8" });
+    return JSON.parse(reportText);
   } catch (error) {
-    throw new Error(`Failed to read content of a file at ${path}: ${error.message || JSON.stringify(error)}`);
+    throw new Error(`Failed to parse file as JSON: ${path} ${error.message || JSON.stringify(error)}`);
   }
 }
 
 module.exports = {
   liveLogExec,
-  getFileContent,
+  getReportObject,
 };
