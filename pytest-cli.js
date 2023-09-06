@@ -25,8 +25,35 @@ async function execute(params) {
     },
     onProgressFn: process.stdout.write.bind(process.stdout),
   }).catch((error) => {
-    throw new Error(error.stderr || error.stdout || error.message || error);
+    throw new Error(error);
   });
+
+  // Exit code 0 All tests were collected and passed successfully
+  // Exit code 1 Tests were collected and run but some of the tests failed
+  // Exit code 2 Test execution was interrupted by the user
+  // Exit code 3 Internal error happened while executing tests
+  // Exit code 4 pytest command line usage error
+  // Exit code 5 No tests were collected
+  if (Number.isInteger(result)) {
+    switch (result) {
+      case 0:
+        // all good
+        break;
+      case 1:
+        // some tests failed, Activity Log or JSON report explains it already
+        break;
+      case 2:
+        throw new Error("Test execution was interrupted by the user.");
+      case 3:
+        throw new Error("Internal error happened while executing tests.");
+      case 4:
+        throw new Error("pytest command line useage error.");
+      case 5:
+        throw new Error("No tests were collected.");
+      default:
+        throw new Error(`Some error occurred but exit code ${result} isn't recognized.`);
+    }
+  }
 
   if (params.jsonReport !== "none") {
     const report = await helpers.analyzePath(`${params.workingDirectory.absolutePath}/.report.json`);
@@ -38,6 +65,7 @@ async function execute(params) {
       }
     }
   }
+
   return result;
 }
 
@@ -45,7 +73,7 @@ async function prepareBuildDockerCommandOptions(params) {
   const {
     command,
     jsonReport,
-    workingDirectory,
+    workingDirectory = await helpers.analyzePath("./"),
     altImage,
     environmentVariables,
   } = params;
@@ -59,9 +87,7 @@ async function prepareBuildDockerCommandOptions(params) {
   const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
   const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
 
-  const absoluteWorkingDirectory = workingDirectory.absolutePath || await helpers.analyzePath("./").absolutePath;
-
-  const reqsFile = await helpers.analyzePath(`${absoluteWorkingDirectory}/requirements.txt`);
+  const reqsFile = await helpers.analyzePath(`${workingDirectory.absolutePath}/requirements.txt`);
 
   let reqsCommands;
   if (!reqsFile.exists) {
@@ -81,7 +107,7 @@ async function prepareBuildDockerCommandOptions(params) {
   const dockerEnvironmentalVariables = { ...environmentVariables };
   const volumeDefinitionsArray = [];
 
-  const workingDirVolumeDefinition = docker.createVolumeDefinition(absoluteWorkingDirectory);
+  const workingDirVolumeDefinition = docker.createVolumeDefinition(workingDirectory.absolutePath);
 
   dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (
     workingDirVolumeDefinition.mountPoint.value

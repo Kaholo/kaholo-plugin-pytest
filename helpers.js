@@ -28,6 +28,9 @@ async function liveLogExec(params) {
   try {
     await util.promisify(childProcessInstance.on.bind(childProcessInstance))("close");
   } catch (error) {
+    if (Number.isInteger(error)) {
+      return error;
+    }
     throw new Error(error);
   }
 
