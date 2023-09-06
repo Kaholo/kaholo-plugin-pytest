@@ -9,6 +9,7 @@
     "chown pytestuser:pytestuser ."
   ],
   "PYTEST_RUNAS_COMMANDS": [
+    "export PATH=$PATH:/home/pytestuser/.local/bin",
     "/usr/local/bin/python -m pip install --upgrade pip",
     "pip install pytest",
     "pip install pytest-json-report"
