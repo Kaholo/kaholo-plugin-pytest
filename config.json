@@ -12,9 +12,11 @@
     "testing",
     "pytest",
     "python",
-    "test",
+    "tests",
     "cli",
-    "pip"
+    "pipreqs",
+    "selenium",
+    "requirements"
   ],
   "methods": [
     {
