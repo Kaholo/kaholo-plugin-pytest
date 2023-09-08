@@ -1,71 +1,92 @@
-const { docker } = require("@kaholo/plugin-library");
-const { resolve: resolvePath } = require("path");
+const { docker, helpers } = require("@kaholo/plugin-library");
 
 const {
-  exec,
-  statPath,
-  getFileContent,
+  liveLogExec,
+  getReportObject,
 } = require("./helpers");
 const {
   PYTEST_DOCKER_IMAGE,
   PYTEST_PREP_COMMANDS,
   PYTEST_RUNAS_COMMANDS,
+  PYTEST_PIPREQS_COMMANDS,
+  PYTEST_REQS_COMMAND,
   PYTEST_CLI_NAME,
   PYTEST_CLI_FULLPATH,
+  EMPTY_RETURN_VALUE,
 } = require("./consts.json");
 
 async function execute(params) {
+  const { failOnTestFailure } = params;
   const dockerCommandBuildOptions = await prepareBuildDockerCommandOptions(params);
-
   const dockerCommand = docker.buildDockerCommand(dockerCommandBuildOptions);
-  const pytestOutput = { stdout: "", stderr: "" };
 
-  const commandOutput = await exec(dockerCommand, {
-    env: dockerCommandBuildOptions.shellEnvironmentalVariables,
+  const result = await liveLogExec({
+    command: dockerCommand,
+    options: {
+      env: dockerCommandBuildOptions.shellEnvironmentalVariables,
+    },
+    onProgressFn: process.stdout.write.bind(process.stdout),
   }).catch((error) => {
-    pytestOutput.stdout = error.stdout;
-    pytestOutput.stderr = error.stderr;
+    throw new Error(error);
   });
 
-  // no caught errors
-  if (commandOutput?.stderr) {
-    console.error(commandOutput.stderr);
-    pytestOutput.cmderr = commandOutput.stderr;
-  }
-  if (commandOutput?.stdout) {
-    if (params.jsonReport !== "none") {
-      const jsonPath = { PATH: `${params.workingDirectory}/.report.json` };
-      const jsonReport = await getFileContent(jsonPath);
-      if (jsonReport) {
-        return jsonReport;
-      }
-      return commandOutput.stdout;
+  // Exit code 0 All tests were collected and passed successfully
+  // Exit code 1 Tests were collected and run but some of the tests failed
+  // Exit code 2 Test execution was interrupted by the user
+  // Exit code 3 Internal error happened while executing tests
+  // Exit code 4 pytest command line usage error
+  // Exit code 5 No tests were collected
+  if (Number.isInteger(result)) {
+    switch (result) {
+      case 0:
+        // all good
+        break;
+      case 1:
+        // handle this later
+        break;
+      case 2:
+        throw new Error("Test execution was interrupted by the user.");
+      case 3:
+        throw new Error("Internal error happened while executing tests.");
+      case 4:
+        throw new Error("pytest command line useage error.");
+      case 5:
+        throw new Error("No tests were collected.");
+      default:
+        throw new Error(`Some error occurred but exit code ${result} isn't recognized.`);
     }
   }
-  // caught a "real" error - fail the action
-  if (pytestOutput.stderr) {
-    throw new Error(pytestOutput.stderr);
-  }
-  // caught error was probably just failing pytests
-  if (pytestOutput.stdout) {
-    if (params.jsonReport !== "none") {
-      const jsonPath = { PATH: `${params.workingDirectory}/.report.json` };
-      const jsonReport = await getFileContent(jsonPath);
+
+  if (params.jsonReport !== "none") {
+    const report = await helpers.analyzePath(`${params.workingDirectory.absolutePath}/.report.json`);
+    if (report.exists) {
+      const jsonPath = { PATH: report.absolutePath };
+      const jsonReport = await getReportObject(jsonPath);
       if (jsonReport) {
+        if (result === 1 && failOnTestFailure) {
+          throw jsonReport;
+        }
         return jsonReport;
       }
     }
-    return pytestOutput.stdout;
   }
-  throw new Error("Unexpected conclusion with no observable results.");
+
+  if (result === 1) {
+    if (failOnTestFailure) {
+      throw new Error("Tests were collected and run but some of the tests failed.");
+    }
+    return EMPTY_RETURN_VALUE;
+  }
+  return result;
 }
 
 async function prepareBuildDockerCommandOptions(params) {
   const {
     command,
     jsonReport,
-    workingDirectory,
+    workingDirectory = await helpers.analyzePath("./"),
     altImage,
+    environmentVariables,
   } = params;
 
   if (altImage) {
@@ -73,41 +94,45 @@ async function prepareBuildDockerCommandOptions(params) {
       console.error(`\nWARNING: Docker Hub "python" image is expected. Using image ${altImage} instead may yeild unreliable results.\n`);
     }
   }
+
   const runAsCommands = PYTEST_RUNAS_COMMANDS.join("; ");
   const prepCommands = PYTEST_PREP_COMMANDS.join("; ");
 
+  const reqsFile = await helpers.analyzePath(`${workingDirectory.absolutePath}/requirements.txt`);
+
+  let reqsCommands;
+  if (!reqsFile.exists) {
+    reqsCommands = PYTEST_PIPREQS_COMMANDS.join("; ");
+  } else {
+    reqsCommands = PYTEST_REQS_COMMAND;
+  }
+
   const chosenCommand = chooseCommand(command, jsonReport);
-  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${chosenCommand}`)} pytestuser`;
+  const combinedCommands = `${prepCommands}; su -c ${JSON.stringify(`${runAsCommands}; ${reqsCommands}; ${chosenCommand}`)} pytestuser`;
 
   const dockerCommandBuildOptions = {
     command: docker.sanitizeCommand(combinedCommands),
     image: altImage ?? PYTEST_DOCKER_IMAGE,
   };
 
-  const dockerEnvironmentalVariables = {};
+  const dockerEnvironmentalVariables = { ...environmentVariables };
   const volumeDefinitionsArray = [];
 
-  if (workingDirectory) {
-    const stat = await statPath(workingDirectory);
-    if (stat !== "DIRECTORY") {
-      throw new Error(`This path does not exist or is not a directory: ${workingDirectory}`);
-    }
-    const absoluteWorkingDirectory = resolvePath(workingDirectory);
-    const workingDirVolumeDefinition = docker.createVolumeDefinition(absoluteWorkingDirectory);
+  const workingDirVolumeDefinition = docker.createVolumeDefinition(workingDirectory.absolutePath);
 
-    dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (
-      workingDirVolumeDefinition.mountPoint.value
-    );
+  dockerEnvironmentalVariables[workingDirVolumeDefinition.mountPoint.name] = (
+    workingDirVolumeDefinition.mountPoint.value
+  );
 
-    dockerCommandBuildOptions.shellEnvironmentalVariables = {
-      ...dockerEnvironmentalVariables,
-      PIP_ROOT_USER_ACTION: "ignore",
-      [workingDirVolumeDefinition.path.name]: workingDirVolumeDefinition.path.value,
-    };
+  dockerCommandBuildOptions.shellEnvironmentalVariables = {
+    ...environmentVariables,
+    ...dockerEnvironmentalVariables,
+    PIP_ROOT_USER_ACTION: "ignore",
+    [workingDirVolumeDefinition.path.name]: workingDirVolumeDefinition.path.value,
+  };
 
-    volumeDefinitionsArray.push(workingDirVolumeDefinition);
-    dockerCommandBuildOptions.workingDirectory = workingDirVolumeDefinition.mountPoint.value;
-  }
+  volumeDefinitionsArray.push(workingDirVolumeDefinition);
+  dockerCommandBuildOptions.workingDirectory = workingDirVolumeDefinition.mountPoint.value;
 
   dockerCommandBuildOptions.volumeDefinitionsArray = volumeDefinitionsArray;
   dockerCommandBuildOptions.environmentVariables = dockerEnvironmentalVariables;
