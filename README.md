@@ -3,11 +3,11 @@ Pytest is a Python testing framework that originated from the PyPy project. It c
 
 This plugin extends Kaholo to be able to run Pytest tests. This is equivalent to running command `pytest` at the command line.
 
-If for whatever reason this plugin is lacking a feature required to successfully run your pytest tests, please do [let us know](). A more generic way (albeit technically more difficult) to run pytest that should work in any scenario is to use the [Kaholo Docker Plugin](https://github.com/Kaholo/kaholo-plugin-docker) method "Run Container". The Pytest Plugin is essentially the same thing, but with many of the details parameterized for a more user-friendly low-code experience.
+If for whatever reason this plugin is lacking a feature required to successfully run your pytest tests, please do [let us know](https://kaholo.io/contact/). A more generic way (albeit technically more difficult) to run pytest that should work in any scenario is to use the [Kaholo Docker Plugin](https://github.com/Kaholo/kaholo-plugin-docker) method "Run Container". The Pytest Plugin is essentially the same thing, but with many of the details parameterized for a more user-friendly low-code experience.
 
 ## Prerequisites
 There are few very important items to successfully use the plugin to execute pytest.
-* Python version - most python projects are developed with a specific version of python, and using the wrong version can cause many types of failure. It is very important to select the correct version in parameter "Alternative Docker Image", e.g. `python:3.8.10`. The default is unlikely to be the correct choice.
+* Python version - most python projects are developed with a specific version of python, and using the wrong version can cause many types of failure. It is very important to select the correct version in parameter "Python Docker Image", e.g. `python:3.8.10`. The default is unlikely to be the correct choice.
 * Requirements text file - a python project should have a requirements.txt file in the root, which is used as the "Working Directory" parameter. If a requirements.txt file is found there, the specified versions of requirements will be installed with `pip` before the tests are run. If no requirements.txt is found, `pipreqs` will be used instead in an attempt to create one. While this fallback method does often work, there are no guarantees. If an appropriate requirements.txt file is in the project but not in the "Working Directory", use the [Kaholo File System Plugin](https://github.com/Kaholo/kaholo-plugin-fs) to copy requirements.txt to the working directory before running the "Pytest Plugin" action.
 
 ## Use of Docker
@@ -26,7 +26,7 @@ Since each run of the plugin starts with a fresh python image, some setup steps 
 * installing dependencies listed in `requirements.txt` in the working directory
 * using pipreqs to identify and install/upgrade modules required by the project and tests if there is no `requirements.txt`
 
-File consts.json also specifies a specific default version of the base python image to start with. Depending on how your python projects and tests were developed, a different image may be needed. For that, use parameter `Alternative Docker Image`.
+File consts.json also specifies a specific default version of the base python image to start with. Depending on how your python projects and tests were developed, a different image may be needed. For that, use parameter `Python Docker Image`.
 
 ## Plugin Installation
 For download, installation, upgrade, downgrade and troubleshooting of plugins in general, see [INSTALL.md](./INSTALL.md).
@@ -64,14 +64,14 @@ If using the code layer, they may also be expressed in JSON. For example in a Ka
       }
     }
 
-And after toggling the code switch on parameter "Environment Variables" one my then use this code:
+And after toggling the code switch on parameter "Environment Variables" one may then use this code:
 
     kaholo.execution.configuration.envs
 
 ### Parameter: Fail Action if Test Fails
 If the Kaholo Action, and in turn potentially the pipeline should fail should any pytest test fail, or more precisely if pytest completes with a return value of 1 instead of 0, enable this parameter. Otherwise the Kaholo Action will simply report the pytest results, including a count of tests that failed and passed, and in Kaholo Executions the action will end with status `success`.
 
-### Parameter: Alternative Docker Image
+### Parameter: Python Docker Image
 Every pytest project requires a specific Python version that is probably no the default specified in file `consts.json`. The plugin can not work properly with any arbitrary Python image. It is suggested to use the official python images found on [Docker Hub](https://hub.docker.com/_/python). For example `python:3.7.17`, `python:3.8.18`, or `python:3.10.13`. Selecting the precise version of python to use is essential.
 
 Failing to specify the correct image or specifying none at all typically results in errors such these:
@@ -89,4 +89,4 @@ An example requirements.txt looks like this:
     requirementslib==3.0.0
     setuptools==45.2.0
 
-It is also possible to specify any Docker image here, including custom images created from a Dockerfile using the [Kaholo Docker Plugin](https://github.com/Kaholo/kaholo-plugin-docker). If an image cannot be found to make the plugin work correctly for your `pytest` use case please do let us know.
+It is also possible to specify any Docker image here, including custom images created from a Dockerfile using the [Kaholo Docker Plugin](https://github.com/Kaholo/kaholo-plugin-docker). If an image cannot be found to make the plugin work correctly for your `pytest` use case please do [let us know](https://kaholo.io/contact/).

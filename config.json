@@ -70,10 +70,11 @@
         },
         {
           "name": "altImage",
-          "viewName": "Alternative Docker Image",
+          "viewName": "Python Docker Image",
           "type": "string",
-          "description": "repo:tag for an alternative python image to use",
+          "description": "repo:tag for the python image to use",
           "placeholder": "python:3.7.14",
+          "default": "python:3.7.14",
           "required": false
         },
         {
