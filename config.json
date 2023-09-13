@@ -90,7 +90,7 @@
           "viewName": "Fail Action if Test Fails",
           "description": "If any test fails, make Kaholo Action fail too.",
           "type": "boolean",
-          "default": false
+          "default": true
         }
       ]
     }
